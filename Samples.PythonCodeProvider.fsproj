@@ -43,14 +43,9 @@
     <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\shared\ProvidedTypes-headd.fsi">
-      <Link>ProvidedTypes-headd.fsi</Link>
-    </Compile>
-    <Compile Include="..\shared\ProvidedTypes-headd.fs">
-      <Link>ProvidedTypes-headd.fs</Link>
-    </Compile>
+    <Compile Include="ProvidedTypes.fsi" />
+    <Compile Include="ProvidedTypes.fs" />
     <Compile Include="PythonCodeProvider.fs" />
-    <None Include="HelloWorld.fs" />
     <None Include="TestScript.fsx" />
     <Content Include="Dependencies\pythonnet\python27.dll">
       <Link>python27.dll</Link>
