@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Samples.PythonCodeProvider", "Samples.PythonCodeProvider.fsproj", "{380603C0-72B7-4E76-8307-907344CDD78E}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PythonTypeProvider", "PythonTypeProvider.fsproj", "{380603C0-72B7-4E76-8307-907344CDD78E}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

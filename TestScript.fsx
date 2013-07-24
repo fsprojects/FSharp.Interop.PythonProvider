@@ -1,5 +1,5 @@
 ﻿
-#r "bin/Debug/Samples.PythonCodeProvider.dll"
+#r "bin/Debug/PythonTypeProvider.dll"
 #r "Dependencies/pythonnet/Python.Runtime.dll"
 
 // Explicit application needed in the demonstrator

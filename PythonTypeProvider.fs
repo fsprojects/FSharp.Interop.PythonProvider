@@ -1,4 +1,4 @@
-﻿namespace PythonCodeProvider
+﻿namespace PythonTypeProvider
 
 open Microsoft.Win32
 open Microsoft.FSharp.Core.CompilerServices
