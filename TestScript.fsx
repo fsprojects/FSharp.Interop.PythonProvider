@@ -15,4 +15,14 @@ let (%%) (f:Python.Runtime.PyObject) (y: 'T) =
        | _ -> failwith "unknown argument type %A" (box(y).GetType())
    f.Invoke args
      
-Python.math
+Python.math.sin %% 3.0
+
+
+
+//open FSharp.Data
+
+//type Freebase.*
+
+//type MyFrebase.* = FreebaseProvider<API_KEY=...>
+
+
