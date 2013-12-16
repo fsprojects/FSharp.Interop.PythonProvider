@@ -9,32 +9,37 @@ open Samples.FSharp.ProvidedTypes
 open System
 open System.Linq.Expressions
 
+[<AutoOpen>]
+module Globals =
+  let private init =
+    lazy
+      try PythonEngine.Initialize() with _ -> ()
+      System.AppDomain.CurrentDomain.DomainUnload.Add (fun _ ->  PythonEngine.Shutdown())
+
+  let acquire() = 
+     init.Force()
+     let n = PythonEngine.AcquireLock() 
+     { new System.IDisposable with member __.Dispose() = PythonEngine.ReleaseLock(n) }
+
 type public RuntimeAPI () =
-    static do try PythonEngine.Initialize() with _ -> ()
-//    static do System.AppDomain.CurrentDomain.DomainUnload.Add (fun _ ->  PythonEngine.Shutdown())
-
     // Runtime entry points, called by Linq Expressions
-    static member GetPythonProperty(pythonModule:string,pythonValueName:string) : PyObject = 
-
-        try PythonEngine.Initialize() with _ -> ()
-
+    static member GetPythonProperty(pythonModule:string,pythonValueName:string) : PyObject =
+        use _lock = acquire()
         let pythonModuleObj = PythonEngine.ImportModule(pythonModule)
         pythonModuleObj.GetAttr(pythonValueName)
+
 
 // Runtime methods to be called by "invoker" Linq expr
 /// Helpers to find the handles in type provider runtime DLL. 
 type internal RuntimeInfo (config : TypeProviderConfig) =
-    static do try PythonEngine.Initialize() with _ -> ()
-    static do System.AppDomain.CurrentDomain.DomainUnload.Add (fun _ ->  PythonEngine.Shutdown())
-    static let pythonRuntime = Runtime()
     let runtimeAssembly = System.Reflection.Assembly.LoadFrom(config.RuntimeAssembly)
 
-    member x.RuntimeAssembly = runtimeAssembly
+    member x.RuntimeAssembly =
+      runtimeAssembly
 
     static member GetPythonPropertyExpr (pythonModule:string, pythonValueName:string) =
         Expr.Call(typeof<RuntimeAPI>.GetMethod("GetPythonProperty"), [ Expr.Value(pythonModule); Expr.Value(pythonValueName)] ) 
 
-    static member Initialize() = pythonRuntime |> ignore
 
 
 // TypeProvider Boiler Plate (must be in namespace not a module)
@@ -49,38 +54,46 @@ type PythonTypeProvider(config : TypeProviderConfig) as this =
     let runtimeInfo = RuntimeInfo(config)
     let rootNamespace = "Python"
     let thisAssembly = runtimeInfo.RuntimeAssembly
-    do RuntimeInfo.Initialize() |> ignore
 
+    let lock = acquire()
     let pythonSysModule = PythonEngine.ImportModule("sys")
     let pythonMathModule = PythonEngine.ImportModule("math")
     let pythonIterToolsModule = PythonEngine.ImportModule("itertools")
 
+
     let emitPythonModuleType(pythonModuleName:string) =         
         let pythonModule = PythonEngine.ImportModule(pythonModuleName)
-        let keyType   = ProvidedTypeDefinition(thisAssembly, rootNamespace, pythonModuleName, Some baseType)
-        keyType.AddXmlDocDelayed (fun () -> 
-                try 
-                  match pythonModule.GetAttr("__doc__") with 
-                  | null -> "no documentation available"
-                  | attr -> "documentation: " + attr.ToString()
-                with err -> sprintf "no documentation available (error: %s)" err.Message)
-        keyType.AddMembersDelayed (fun () -> 
-            let pythonModuleItems     = pythonModule.Dir()
+        let t = ProvidedTypeDefinition(thisAssembly, rootNamespace, pythonModuleName, Some baseType)
+        t.AddXmlDocDelayed (fun () ->
+          use _lock = acquire()
+          if pythonModule.HasAttr "__doc__" then
+            (pythonModule.GetAttr "__doc__").ToString()
+          else
+            sprintf "The Python module %s" (pythonModule.ToString()))
+        t.AddMembersDelayed (fun () ->
+            use _lock = acquire()
+            let pythonModuleItems = pythonModule.Dir()
             [ for item in pythonModuleItems do 
-                let ty   = typeof<PyObject> 
                 let pythonValueName = item.ToString()
                 let prop = ProvidedProperty(pythonValueName, 
-                                            ty,                     
+                                            typeof<PyObject>,
                                             IsStatic=true,
                                             GetterCode=(fun _args -> RuntimeInfo.GetPythonPropertyExpr(pythonModuleName,pythonValueName)))        
+                                            //GetterCode=(fun _args -> <@@ RuntimeAPI.GetPythonProperty(pythonModuleName,pythonValueName) @@>))        
+
                 if pythonValueName.Contains("built-in function") then
-                    prop.AddXmlDoc(item.ToString() + ": " + item.GetAttr("__doc__").ToString())
+                    let doc = item.ToString() + ": " + item.GetAttr("__doc__").ToString()
+                    prop.AddXmlDoc(System.Security.SecurityElement.Escape(doc))
                 else
+                  let itemObj = pythonModule.GetAttr(item)
+                  if itemObj.HasAttr("__doc__") then
+                    let doc = item.ToString() + ": " + itemObj.GetAttr("__doc__").ToString()
+                    prop.AddXmlDoc(System.Security.SecurityElement.Escape(doc))
+                  else
                     prop.AddXmlDoc("Read the Python value " + pythonModuleName + "." + pythonValueName)
                 //prop.AddXmlDoc(pythonModuleItem.ToString() + ": " + pythonModuleItem.GetAttr("__doc__").ToString())
                 yield prop ])
-        keyType 
-
+        t 
 
     let typesAll = 
       try
@@ -107,6 +120,7 @@ type PythonTypeProvider(config : TypeProviderConfig) as this =
           [ ]
 
     do this.AddNamespace(rootNamespace, typesAll)
+    do lock.Dispose()
                             
 [<assembly:TypeProviderAssembly>]
 do()
