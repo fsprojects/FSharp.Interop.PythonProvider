@@ -1,23 +1,51 @@
 ﻿#r "Dependencies/pythonnet/Python.Runtime.dll"
-#r "bin/Debug/PythonTypeProvider.dll"
+#r "bin/Debug/FSharp.Interop.PythonProvider.dll"
 
-// Explicit application needed in the demonstrator
-let (%%) (f:Python.Runtime.PyObject) (y: 'T) = 
-   let args = 
-       match box y with 
-       | null -> failwith "invalid null argument value to python function call"
-       | :? Python.Runtime.PyObject as v -> v
-       | :? double as v -> new Python.Runtime.PyFloat(v) :> Python.Runtime.PyObject
-       | :? int as v -> new Python.Runtime.PyInt(v) :> Python.Runtime.PyObject
-       | :? int64 as v -> new Python.Runtime.PyLong(v) :> Python.Runtime.PyObject
-       | :? string as v -> new Python.Runtime.PyString(v) :> Python.Runtime.PyObject
-       | _ -> failwith "unknown argument type %A" (box(y).GetType())
-   f.Invoke args
+[<AutoOpen>]
+module Helpers = 
+    open Python.Runtime
+    // Explicit application needed in the demonstrator
+    let (%%) (f:PyObject) (y: 'T) = 
+       let args = 
+           if typeof<'T> = typeof<unit> then
+               [|  |]
+           else 
+               let elems = 
+                   if Reflection.FSharpType.IsTuple typeof<'T> then
+                      Reflection.FSharpValue.GetTupleFields (box y)
+                   else 
+                      [| box y |]
+           
+               [| for e in elems ->
+                       match box e with 
+                       | null -> failwith "invalid null argument value to python function call"
+                       | :? PyObject as v -> v
+                       | :? double as v -> new PyFloat(v) :> PyObject
+                       | :? int as v -> new PyInt(v) :> PyObject
+                       | :? int64 as v -> new PyLong(v) :> PyObject
+                       | :? string as v -> new PyString(v) :> PyObject
+                       | _ -> failwith "unknown argument type %A" (box(y).GetType()) 
+               |]
+       f.Invoke args
      
-Python.math.pi
-//Python.math.sin %% 3.0
+open FSharp.Interop
 
-Python
+
+printfn "Res = %A" Python.math.pi
+Python.math.sin %% 3.0
+
+Python.UserDict.DictMixin
+Python.__builtin__.ArithmeticError
+Python.__main__.__doc__
+Python._abcoll.ABCMeta
+Python._codecs.ascii_decode
+Python._functools.partial
+Python.abc.abstractproperty
+Python.sys.copyright
+Python.operator.abs %% Python.math.pi
+
+//type MyCode = PythonProvider<"test.py">
+//MyCode.aMethod()
 
 (*
 Python.math.sin %% 3.0

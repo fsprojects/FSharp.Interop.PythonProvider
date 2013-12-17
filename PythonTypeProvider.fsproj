@@ -8,7 +8,7 @@
     <ProjectGuid>{380603c0-72b7-4e76-8307-907344cdd78e}</ProjectGuid>
     <OutputType>Library</OutputType>
     <RootNamespace>PythonTypeProvider</RootNamespace>
-    <AssemblyName>PythonTypeProvider</AssemblyName>
+    <AssemblyName>FSharp.Interop.PythonProvider</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <Name>PythonTypeProvider</Name>
     <TargetFSharpCoreVersion>4.3.0.0</TargetFSharpCoreVersion>
@@ -52,11 +52,18 @@
   <ItemGroup>
     <Compile Include="ProvidedTypes.fsi" />
     <Compile Include="ProvidedTypes.fs" />
-    <Compile Include="PythonTypeProvider.fs" />
     <Content Include="Dependencies\pythonnet\python27.dll">
       <Link>python27.dll</Link>
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Compile Include="PythonTypeProvider.fs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="PythonTypeProviderProxy\PythonTypeProviderProxy.fsproj">
+      <Name>PythonTypeProviderProxy</Name>
+      <Project>{f5932d2f-eb19-45b6-961d-01acf9e086bd}</Project>
+      <Private>True</Private>
+    </ProjectReference>
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
