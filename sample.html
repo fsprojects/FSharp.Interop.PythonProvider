@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="utf-8">
-    <title>FSharp.Interop.PythonProvider
+    <title>Sample
 </title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Experimental F# type provider for Python.">
@@ -33,38 +33,37 @@
       <div class="row">
         <div class="span9" id="main">
           
-<h1>FSharp.Interop.PythonProvider</h1>
+<h1>Sample</h1>
 
-<p>Early experimental F# type provider for Python.</p>
+<table class="pre"><tr><td class="lines"><pre class="fssnip">
+<span class="l"> 1: </span>
+<span class="l"> 2: </span>
+<span class="l"> 3: </span>
+<span class="l"> 4: </span>
+<span class="l"> 5: </span>
+<span class="l"> 6: </span>
+<span class="l"> 7: </span>
+<span class="l"> 8: </span>
+<span class="l"> 9: </span>
+<span class="l">10: </span>
+</pre>
+</td>
+<td class="snippet"><pre class="fssnip">
+<span class="prep">#r</span> <span class="s">&quot;</span><span class="s">Python</span><span class="s">.</span><span class="s">Runtime</span><span class="s">.</span><span class="s">dll</span><span class="s">&quot;</span>
+<span class="prep">#r</span> <span class="s">&quot;</span><span class="s">FSharp</span><span class="s">.</span><span class="s">Interop</span><span class="s">.</span><span class="s">PythonProvider</span><span class="s">.</span><span class="s">dll</span><span class="s">&quot;</span>
 
-<p>Uses <a href="http://pythonnet.sourceforge.net/">Python for .NET</a> for metadata and interop.</p>
+<span class="k">open</span> <span class="i">FSharp</span><span class="o">.</span><span class="i">Interop</span>
 
-<p>Currently uses python27.dll for execution on Windows (this is determined by Python.NET).</p>
+<span class="c">//Python.math.sin Python.math.pi</span>
+<span class="c">//Python.math.cos Python.math.pi</span>
 
-<p>Currently 32-bit only.</p>
+<span onmouseout="hideTip(event, 'fs1', 1)" onmouseover="showTip(event, 'fs1', 1)" class="i">Python</span><span class="o">.</span><span class="i">math</span><span class="o">.</span><span class="i">pi</span>
+<span onmouseout="hideTip(event, 'fs1', 2)" onmouseover="showTip(event, 'fs1', 2)" class="i">Python</span><span class="o">.</span><span class="i">os</span><span class="o">.</span><span class="i">curdir</span></pre>
+</td>
+</tr>
+</table>
 
-<div class="row">
-  <div class="span1"></div>
-  <div class="span6">
-    <div class="well well-small" id="nuget">
-      The library can be <a href="https://nuget.org/packages/FSharp.Interop.PythonProvider">installed from NuGet</a>:
-      <pre>PM> Install-Package FSharp.Interop.PythonProvider -prerelease</pre>
-    </div>
-  </div>
-  <div class="span1"></div>
-</div>
-
-<h2>Contributing and copyright</h2>
-
-<p>The project is hosted on <a href="https://github.com/fsprojects/FSharp.Interop.PythonProvider">GitHub</a> where you can <a href="https://github.com/fsprojects/FSharp.Interop.PythonProvider/issues">report issues</a>, fork 
-the project and submit pull requests. If you're adding new public API, please also 
-consider adding <a href="https://github.com/fsprojects/FSharp.Interop.PythonProvider/tree/master/docs/content">samples</a> that can be turned into a documentation. You might
-also want to read <a href="https://github.com/fsprojects/FSharp.Interop.PythonProvider/blob/master/README.md">library design notes</a> to understand how it works.</p>
-
-<p>The library is available under the Apache 2.0 license, which allows modification and 
-redistribution for both commercial and non-commercial purposes. For more information see the 
-<a href="https://github.com/fsprojects/FSharp.Interop.PythonProvider/blob/master/LICENSE.txt">License file</a> in the GitHub repository.</p>
-
+<div class="tip" id="fs1">namespace Python</div>
 
         </div>
         <div class="span3">
