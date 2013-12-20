@@ -20,9 +20,9 @@ let tags = "F# fsharp typeproviders python"
 let solutionFile  = "PythonTypeProvider"
 
 let testAssemblies = "tests/**/bin/Release/*.Tests*.dll"
-let gitHome = "https://github.com/fsprojects/FSharp.Interop.Experimental.PythonProvider"
-let gitName = "FSharp.Interop.Experimental.PythonProvider"
-let cloneUrl = "git@github.com:fsprojects/FSharp.Interop.Experimental.PythonProvider.git"
+let gitHome = "https://github.com/fsprojects/FSharp.Interop.PythonProvider"
+let gitName = "FSharp.Interop.PythonProvider"
+let cloneUrl = "https://github.com/fsprojects/FSharp.Interop.PythonProvider"
 let nugetDir = "./nuget/"
 
 // Read additional information from the release notes document

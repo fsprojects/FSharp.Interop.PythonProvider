@@ -12,9 +12,9 @@
 
     <owners>@authors@</owners>
 
-    <licenseUrl>https://github.com/fsprojects/FSharp.Interop.Experimental.PythonProvider/blob/master/LICENSE.txt</licenseUrl>
+    <licenseUrl>https://github.com/fsprojects/FSharp.Interop.PythonProvider/blob/master/LICENSE.txt</licenseUrl>
 
-    <projectUrl>https://github.com/fsprojects/FSharp.Interop.Experimental.PythonProvider</projectUrl>
+    <projectUrl>https://github.com/fsprojects/FSharp.Interop.PythonProvider</projectUrl>
 
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
 
