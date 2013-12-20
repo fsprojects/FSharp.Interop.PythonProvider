@@ -1,7 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PythonTypeProvider.Tests", "PythonTypeProvider.Tests.fsproj", "{D1DE417D-B34A-4F03-8755-949A54435D2A}"
+# Visual Studio 2013
+VisualStudioVersion = 12.0.21005.1
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PythonTypeProvider.Tests", "tests\PythonTypeProvider.Tests\PythonTypeProvider.Tests.fsproj", "{D1DE417D-B34A-4F03-8755-949A54435D2A}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
