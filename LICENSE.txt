@@ -268,6 +268,6 @@ accompanying credits file.
 
 =============================================================
 
-Python components - see license a http://docs.python.org/2/license.html
+Python components (python27.dll) - see license at http://docs.python.org/2/license.html
 
 
