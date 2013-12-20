@@ -1,7 +1,7 @@
-PythonTypeprovider
+PythonTypeProvider
 ==================
 
-Early experimental F# type provider for python
+Early experimental F# type provider for python.
 
 ## Disclaimer
 
