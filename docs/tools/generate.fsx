@@ -6,15 +6,15 @@
 // Binaries that have XML documentation (in a corresponding generated XML file)
 let referenceBinaries = [ "FSharp.Interop.PythonProvider.dll" ]
 // Web site location for the generated documentation
-let website = "/FSharp.Interop.Experimental.PythonProvider"
+let website = "/FSharp.Interop.PythonProvider"
 
 // Specify more information about your project
 let info =
-  [ "project-name", "fsprojects/FSharp.Interop.Experimental.PythonProvider"
-    "project-author", "Steffen Forkmann"
-    "project-summary", "Early experimental F# type provider for python."
-    "project-github", "https://github.com/fsprojects/FSharp.Interop.Experimental.PythonProvider"
-    "project-nuget", "https://www.nuget.org/packages/FSharp.Interop.Experimental.PythonProvider" ]
+  [ "project-name", "fsprojects/FSharp.Interop.PythonProvider"
+    "project-author", "F# Software Foundation"
+    "project-summary", "Experimental F# type provider for Python."
+    "project-github", "https://github.com/fsprojects/FSharp.Interop.PythonProvider"
+    "project-nuget", "https://www.nuget.org/packages/FSharp.Interop.PythonProvider" ]
 
 // --------------------------------------------------------------------------------------
 // For typical project, no changes are needed below

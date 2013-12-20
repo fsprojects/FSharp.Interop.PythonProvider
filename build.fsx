@@ -93,7 +93,7 @@ Target "NuGet" (fun _ ->
     let description = description.Replace("\r", "")
                                  .Replace("\n", "")
                                  .Replace("  ", " ")
-    let project = projects.[0]
+    let project = gitName
 
     let nugetDocsDir = nugetDir @@ "docs"
     let nugetlibDir = nugetDir @@ "lib/net40"

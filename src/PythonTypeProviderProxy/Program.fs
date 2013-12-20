@@ -113,8 +113,8 @@ module Main =
         let objRef = RemotingServices.Marshal(server,"PythonStaticInfoServer") 
         RemotingConfiguration.RegisterActivatedServiceType(typeof<PythonStaticInfoServer>)
         //System.Console.WriteLine("Hit <enter> to exit...")
-        //let  form = new System.Windows.Forms.Form()
+        //let  form = new System.Windows.Forms.Form(Visible=false)
         System.Windows.Forms.Application.Run()
         //form.Visible <- false
-        let line = System.Console.ReadLine()
+        //let line = System.Console.ReadLine()
         0 // return an integer exit code

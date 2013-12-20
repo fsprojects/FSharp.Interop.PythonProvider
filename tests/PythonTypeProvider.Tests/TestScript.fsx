@@ -1,10 +1,10 @@
-﻿#r "Dependencies/pythonnet/Python.Runtime.dll"
-#r "bin/Debug/FSharp.Interop.PythonProvider.dll"
+﻿#r "../../bin/Python.Runtime.dll"
+#r "../../bin/FSharp.Interop.PythonProvider.dll"
 
 [<AutoOpen>]
 module Helpers = 
     open Python.Runtime
-    // Explicit application needed in the demonstrator
+    // Explicit application needed in the demonstrator 
     let (%%) (f:PyObject) (y: 'T) = 
        let args = 
            if typeof<'T> = typeof<unit> then
