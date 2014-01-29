@@ -9,6 +9,26 @@ PythonEngine.Initialize()
 let n = PythonEngine.BeginAllowThreads()
 //PythonEngine.EndAllowThreads(n)
 
+let (?) (pyObject: PyObject) (name: string) = pyObject.GetAttr name 
+
+let callable = 
+    let builtin = PythonEngine.ImportModule("__builtin__")
+    let pythonCallable = builtin ? callable
+    fun(f: PyObject) -> pythonCallable.Invoke(f).IsTrue()
+
+let pyBuiltinsModule = PythonEngine.ImportModule("__builtin__")
+let import = pyBuiltinsModule.GetAttr("__import__")
+let none = PythonEngine.RunSimpleString("eval('None')")
+let x = PyObject.FromManagedObject(5.0f)
+x.GetPythonType()
+
+let pySysModule = PythonEngine.ImportModule("sys")
+let pyMathModule = PythonEngine.ImportModule("math")
+let sin = pyMathModule ? sin
+let modules = pySysModule.GetAttr("modules") 
+let keys = modules.InvokeMethod("keys")
+
+
 let l = PythonEngine.AcquireLock()
 let m = 
     PythonEngine.ModuleFromString("a", """
@@ -178,3 +198,5 @@ let (%%) (f:Python.Runtime.PyObject) (y: 'T) =
    f.Invoke args
      
 *)
+
+

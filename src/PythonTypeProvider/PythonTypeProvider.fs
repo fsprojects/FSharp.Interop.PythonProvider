@@ -1,4 +1,4 @@
-﻿namespace PythonTypeProvider
+﻿namespace FSharp.Interop
 
 open Microsoft.Win32
 open Microsoft.FSharp.Core.CompilerServices
@@ -52,6 +52,17 @@ module PythonRuntime =
         try PythonEngine.Initialize()  with _ -> ()
         System.AppDomain.CurrentDomain.DomainUnload.Add (fun _ ->  Python.Runtime.PythonEngine.Shutdown())
 
+    let convertToPyObject (x : obj) = 
+        match x with
+        | null -> failwith "invalid null argument value to python function call"
+        | :? PyObject as v -> v
+        | :? double as v -> new PyFloat(v) :> PyObject
+        | :? float32 as v -> new PyFloat(double v) :> PyObject
+        | :? int as v -> new PyInt(v) :> PyObject
+        | :? int64 as v -> new PyLong(v) :> PyObject
+        | :? string as v -> new PyString(v) :> PyObject
+        | _ -> failwith "unknown argument type %A" (box(x).GetType()) 
+
 /// Used at runtime
 type public RuntimeAPI () =
 
@@ -61,6 +72,10 @@ type public RuntimeAPI () =
         let pyModuleObj = Python.Runtime.PythonEngine.ImportModule(pyModule)
         pyModuleObj.GetAttr(pyValueName)
 
+    static member Call(pyModule: string, name: string, args: obj[]) : Python.Runtime.PyObject =
+        PythonRuntime.init.Force()
+        let pyModuleObj = Python.Runtime.PythonEngine.ImportModule(pyModule)
+        pyModuleObj.GetAttr(name).Invoke([| for a in args -> PythonRuntime.convertToPyObject a |])
 
 // Runtime methods to be called by "invoker" Linq expr
 /// Helpers to find the handles in type provider runtime DLL. 
@@ -80,8 +95,8 @@ type internal RuntimeInfo (config : TypeProviderConfig) =
     member x.RuntimeAssembly =
       runtimeAssembly
 
-    static member GetPythonPropertyExpr (pyModule:string, pyValueName:string) =
-        Expr.Call(typeof<RuntimeAPI>.GetMethod("GetPythonProperty"), [ Expr.Value(pyModule); Expr.Value(pyValueName)] ) 
+//    static member GetPythonPropertyExpr (pyModule:string, pyValueName:string) =
+//        Expr.Call(typeof<RuntimeAPI>.GetMethod("GetPythonProperty"), [ Expr.Value(pyModule); Expr.Value(pyValueName)] ) 
 
 
 
@@ -91,7 +106,8 @@ type PythonTypeProvider(config : TypeProviderConfig) as this =
     inherit TypeProviderForNamespaces()
 
     let runtimeInfo = RuntimeInfo(config)
-    let thisAssembly = runtimeInfo.RuntimeAssembly
+    let nameSpace = this.GetType().Namespace
+    let targetAssembly = runtimeInfo.RuntimeAssembly
 
     let addPythonModulesAsMembers (t:ProvidedTypeDefinition, pyModuleName, xmlDoc) = 
 
@@ -100,30 +116,80 @@ type PythonTypeProvider(config : TypeProviderConfig) as this =
               | Some doc -> doc
               | None -> sprintf "The Python module %s" pyModuleName)
             t.AddMembersDelayed (fun () ->
-                [ for pyValueName, pyItemDoc in PythonStaticInfo.GetServer().GetModuleInfo(pyModuleName) do
-                    let prop = ProvidedProperty(pyValueName, 
-                                                typeof<Python.Runtime.PyObject>,
-                                                IsStatic=true,
-                                                //GetterCode=(fun _args -> RuntimeInfo.GetPythonPropertyExpr(pyModuleName,pyValueName)))        
-                                                GetterCode=(fun _args -> <@@ RuntimeAPI.GetPythonProperty(pyModuleName,pyValueName) @@>))        
+                [ for pyValueName, pyItemDoc, pyArgs in PythonStaticInfo.GetServer().GetModuleInfo(pyModuleName) do
+                    
+                    let newMember : MemberInfo = 
+                        match pyArgs with
+                        | Some args when args.Length > 0 -> 
+                            let parameters = [for a in args -> ProvidedParameter(a, typeof<obj>)]
+                            let method' = ProvidedMethod(pyValueName, parameters, returnType = typeof<Python.Runtime.PyObject>, IsStaticMethod = true)
+                            method'.InvokeCode <- fun args ->  
+                                let argsArray = Expr.NewArray(typeof<obj>, args)
+                                <@@ RuntimeAPI.Call(pyModuleName, pyValueName, %%argsArray) @@>
 
-                    let doc = 
-                        match pyItemDoc with 
-                        | Some doc -> doc
-                        | None -> "The Python value " + pyModuleName + "." + pyValueName
-                    prop.AddXmlDoc("<summary>" + SecurityElement.Escape(doc) + "</summary>")
+                            let doc = 
+                                match pyItemDoc with 
+                                | Some doc -> doc
+                                | None -> "The Python value " + pyModuleName + "." + pyValueName
+                            method'.AddXmlDoc("<summary>" + SecurityElement.Escape(doc) + "</summary>")
+                            upcast method'
+                            
+                        | _ -> 
+                            let prop = ProvidedProperty(pyValueName, 
+                                                        typeof<Python.Runtime.PyObject>,
+                                                        IsStatic=true,
+                                                        //GetterCode=(fun _args -> RuntimeInfo.GetPythonPropertyExpr(pyModuleName,pyValueName)))        
+                                                        GetterCode=(fun _args -> <@@ RuntimeAPI.GetPythonProperty(pyModuleName,pyValueName) @@>))        
 
-                    yield prop ]
+                            let doc = 
+                                match pyItemDoc with 
+                                | Some doc -> doc
+                                | None -> "The Python value " + pyModuleName + "." + pyValueName
+                            prop.AddXmlDoc("<summary>" + SecurityElement.Escape(doc) + "</summary>")
+                            upcast prop
+
+                    yield newMember ]
             )
 
-    let rootNamespace1 = "FSharp.Interop.Python"
-    let typesAll = 
-        [ for (pyModuleName, xmlDoc) in PythonStaticInfo.GetServer().GetLoadedModulesInfo() do
-              let t = ProvidedTypeDefinition(thisAssembly, rootNamespace1, pyModuleName, Some typeof<System.Object> )
-              addPythonModulesAsMembers (t, pyModuleName, xmlDoc)
-              yield t ]
+//    let typesAll = 
+//        [ for (pyModuleName, xmlDoc) in PythonStaticInfo.GetServer().GetLoadedModulesInfo() do
+//              let t = ProvidedTypeDefinition(targetAssembly, nameSpace, pyModuleName, Some typeof<System.Object> )
+//              addPythonModulesAsMembers (t, pyModuleName, xmlDoc)
+//              yield t ]
 
-    do this.AddNamespace(rootNamespace1, typesAll)
+    let providerType = ProvidedTypeDefinition(targetAssembly, nameSpace, "PythonProvider", Some typeof<obj>, HideObjectMethods = true)
+    
+    do 
+        providerType.DefineStaticParameters(
+            parameters = [ 
+                ProvidedStaticParameter("Import", typeof<string>, "") 
+            ],             
+            instantiationFunction = this.CreateType
+        )
+
+        this.AddNamespace( nameSpace, [ providerType])
+
+    member internal this.CreateType typeName parameters = 
+        let modulesToImport : string = unbox parameters.[0] 
+
+        let rootType = ProvidedTypeDefinition(targetAssembly, nameSpace, typeName, baseType = Some typeof<obj>, HideObjectMethods = true)
+
+        rootType.AddMembersDelayed <| fun() ->
+            [ 
+                let server = PythonStaticInfo.GetServer()
+                for pyModuleName, xmlDoc in server.GetLoadedModulesInfo( import = modulesToImport.Split(','))  do
+                    yield this.GetTypeForModule(pyModuleName, xmlDoc)
+            ]
+
+
+        rootType
+        
+    member internal this.GetTypeForModule(pyModuleName, xmlDoc) = 
+        let t = ProvidedTypeDefinition( pyModuleName, Some typeof<System.Object>)
+        addPythonModulesAsMembers (t, pyModuleName, xmlDoc)
+        t 
+        
+
 
 // Allow references to user scripts. Disabled as the ModuleFromString is relying on having a side effect
 // on the server (loading the script using ModuleFromString), but we allow restarts of the server. Instead 
@@ -132,7 +198,7 @@ type PythonTypeProvider(config : TypeProviderConfig) as this =
 #if USER_SCRIPTS
     let rootNamespace2 = "FSharp.Interop"
     let typeBeforeStaticParams = 
-        let t = ProvidedTypeDefinition(thisAssembly, rootNamespace2, "PythonProvider", Some typeof<System.Object> )
+        let t = ProvidedTypeDefinition(targetAssembly, rootNamespace2, "PythonProvider", Some typeof<System.Object> )
         t.AddXmlDoc("""Experimental: PythonProvider<"script.py">""")
         t.DefineStaticParameters( [ ProvidedStaticParameter("Script",typeof<string>,null) ] , (fun typeName args -> 
             let scriptFile = args.[0] :?> string
@@ -140,7 +206,7 @@ type PythonTypeProvider(config : TypeProviderConfig) as this =
             PythonStaticInfo.Server.ModuleFromString(moduleName,File.ReadAllText(scriptFile))
             //if result = -1 then failwith "error from RunSimpleString - todo, report the error properly"
 
-            let typeWithStaticParams = ProvidedTypeDefinition(thisAssembly, rootNamespace2, typeName, Some typeof<System.Object> )
+            let typeWithStaticParams = ProvidedTypeDefinition(targetAssembly, rootNamespace2, typeName, Some typeof<System.Object> )
             addPythonModulesAsMembers (typeWithStaticParams, moduleName, None)
             typeWithStaticParams))
         t

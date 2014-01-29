@@ -1,38 +1,11 @@
 ﻿#r "../../bin/Python.Runtime.dll"
 #r "../../bin/FSharp.Interop.PythonProvider.dll"
 
-[<AutoOpen>]
-module Helpers = 
-    open Python.Runtime
-    // Explicit application needed in the demonstrator 
-    let (%%) (f:PyObject) (y: 'T) = 
-       let args = 
-           if typeof<'T> = typeof<unit> then
-               [|  |]
-           else 
-               let elems = 
-                   if Reflection.FSharpType.IsTuple typeof<'T> then
-                      Reflection.FSharpValue.GetTupleFields (box y)
-                   else 
-                      [| box y |]
-           
-               [| for e in elems ->
-                       match box e with 
-                       | null -> failwith "invalid null argument value to python function call"
-                       | :? PyObject as v -> v
-                       | :? double as v -> new PyFloat(v) :> PyObject
-                       | :? int as v -> new PyInt(v) :> PyObject
-                       | :? int64 as v -> new PyLong(v) :> PyObject
-                       | :? string as v -> new PyString(v) :> PyObject
-                       | _ -> failwith "unknown argument type %A" (box(y).GetType()) 
-               |]
-       f.Invoke args
-     
 open FSharp.Interop
-
+type Python = PythonProvider<"sys, math">
 
 printfn "Res = %A" Python.math.pi
-Python.math.sin %% 3.0
+Python.math.sin(3.0)
 
 Python.UserDict.DictMixin
 Python.__builtin__.ArithmeticError
@@ -42,7 +15,7 @@ Python._codecs.ascii_decode
 Python._functools.partial
 Python.abc.abstractproperty
 Python.sys.copyright
-Python.operator.abs %% Python.math.pi
+Python.operator.abs( Python.math.pi)
 
 //type MyCode = PythonProvider<"test.py">
 //MyCode.aMethod()

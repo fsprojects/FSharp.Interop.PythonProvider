@@ -6,6 +6,7 @@
 open Python
 open Python.Runtime
 open System
+open System.Diagnostics
 
 // Put the stuff that accesses Python in an app domain. The python code
 // seems to go scrpaing through all loaded DLLs looking for something, and this process triggers
@@ -18,12 +19,12 @@ type PythonStaticInfoServer() =
     inherit MarshalByRefObject()
 
     let init =
-      lazy
-        PythonEngine.Initialize()  
-        // I don't fully understand why this call is needed, but without it no lock-releasing seems to happen
-        //let nb = PythonEngine.BeginAllowThreads() 
-        //PythonEngine.EndAllowThreads(nb)
-        System.AppDomain.CurrentDomain.DomainUnload.Add (fun _ ->  Python.Runtime.PythonEngine.Shutdown())
+        lazy
+            PythonEngine.Initialize()  
+            // I don't fully understand why this call is needed, but without it no lock-releasing seems to happen
+            //let nb = PythonEngine.BeginAllowThreads() 
+            //PythonEngine.EndAllowThreads(nb)
+            System.AppDomain.CurrentDomain.DomainUnload.Add (fun _ ->  Python.Runtime.PythonEngine.Shutdown())
 
     let acquire() = 
         init.Force()
@@ -32,15 +33,41 @@ type PythonStaticInfoServer() =
 
     let runtime = Python.Runtime.Runtime()
 
+    let (?) (pyObject: PyObject) (name: string) = pyObject.GetAttr name 
+
+    let (|Attr|_|) (name: string) (o: PyObject) = 
+        if o.HasAttr( name) 
+        then Some( o?name)
+        else None
+
+    let builtin = 
+        let isbuiltinFunc = 
+            lazy 
+                use _lock = acquire()
+                let builtin = PythonEngine.ImportModule("inspect")
+                builtin ? isbuiltin
+        fun(f: PyObject) -> isbuiltinFunc.Value.Invoke(f).IsTrue()
+
+    let argsFromBuiltinDocs(doc: string) = 
+        let firstLine = doc.Split('\n').[0]
+        let leftParent, rightParent = firstLine.IndexOf '(', firstLine.LastIndexOf ')'
+        let length = rightParent - leftParent - 1
+        //Debug.Assert( length > 0, "Failed to parse doc string: " + doc)
+        assert ( length >= 0)
+        doc.Substring(leftParent + 1, length).Split(',') |> Array.map (fun x -> x.Trim())
+
 //    // Prevent the app domain from exiting, we keep it around forever.
 //    // See http://stackoverflow.com/questions/2410221/appdomain-and-marshalbyrefobject-life-time-how-to-avoid-remotingexception
 //    override __.InitializeLifetimeService() = null
 
-    member x.GetLoadedModulesInfo() = 
+    member x.GetLoadedModulesInfo(import: string[]) = 
         use _lock = acquire()
+        for m in import do
+            let pyModule = PythonEngine.ImportModule(m.Trim())
+            assert (pyModule <> null)
+
         use pySysModule = PythonEngine.ImportModule("sys")
-        use pyMathModule = PythonEngine.ImportModule("math")
-        use modules = pySysModule.GetAttr("modules") 
+        use modules = pySysModule.GetAttr("modules")    
         use keys = modules.InvokeMethod("keys")
         [ for i in 0 .. keys.Length() - 1 do 
             use idx = new PyInt(i)
@@ -77,19 +104,37 @@ type PythonStaticInfoServer() =
         use pyModule = PythonEngine.ImportModule(pyModuleName)
         use pyModuleItems = pyModule.Dir()
         [ for pyItem in pyModuleItems do
-            let pyValueName = pyItem.ToString()
+            use pyItemObj = pyModule.GetAttr( pyItem)
             let doc = 
-                if pyValueName.Contains("built-in function") then
+                match pyItemObj.HasAttr( "__doc__"), lazy pyItemObj.GetAttr( "__doc__") with
+                | false, _ -> None
+                | true, Lazy x when x.Repr() = "None" -> None
+                | true, Lazy attr -> 
+                    attr.ToString() |> Some
+
+            let memberName = pyItem.ToString()
+
+            let args = 
+                if pyItemObj.IsCallable() 
+                then
+                    match builtin pyItemObj, doc with
+                    | true, Some docString -> Some( argsFromBuiltinDocs docString)
+                    | true, None -> Some( [| "params" |])
+                    | false, _ -> None
+                else 
+                    None
+
+            let doc = 
+                if memberName.Contains("built-in function") then
                     use attr = pyItem.GetAttr("__doc__")
                     attr.ToString() |> Some
                 else
-                    use pyItemObj = pyModule.GetAttr(pyItem)
                     if pyItemObj.HasAttr("__doc__") then
                         use attr = pyItemObj.GetAttr("__doc__")
                         attr.ToString() |> Some
                     else
                         None 
-            yield pyValueName, doc ]
+            yield memberName, doc, args ]
 
 
 module Main = 

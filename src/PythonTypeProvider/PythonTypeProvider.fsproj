@@ -55,12 +55,12 @@
   </Choose>
   <Import Project="$(FSharpTargetsPath)" Condition="Exists('$(FSharpTargetsPath)')" />
   <ItemGroup>
-    <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="ProvidedTypes.fsi" />
-    <Compile Include="ProvidedTypes.fs" />
     <Content Include="python27.dll">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="ProvidedTypes-head.fsi" />
+    <Compile Include="ProvidedTypes-head.fs" />
     <Compile Include="PythonTypeProvider.fs" />
   </ItemGroup>
   <ItemGroup>
