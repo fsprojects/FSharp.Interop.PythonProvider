@@ -12,6 +12,8 @@ open System.Reflection
 open System.Diagnostics
 open PythonTypeProvider.Server
 
+type Platform = x86 = 0 | x64 = 1
+
 module PythonStaticInfo = 
     let mutable lastServer = None
     let GetServer() =
@@ -43,10 +45,9 @@ module PythonStaticInfo =
         else 
             null))
 
-
+open Python.Runtime
 
 module PythonRuntime = 
-    open Python.Runtime
     let init =
       lazy
         try PythonEngine.Initialize()  with _ -> ()
@@ -64,8 +65,8 @@ module PythonRuntime =
         | _ -> failwith "unknown argument type %A" (box(x).GetType()) 
 
 /// Used at runtime
-type public RuntimeAPI () =
-
+type RuntimeAPI () =
+    
     // Runtime entry points, called by Linq Expressions
     static member GetPythonProperty(pyModule:string,pyValueName:string) : Python.Runtime.PyObject =
         PythonRuntime.init.Force()
@@ -91,6 +92,13 @@ type internal RuntimeInfo (config : TypeProviderConfig) =
             pythonRuntimeAssembly 
         else 
             null))
+
+    //add resolution folder to sys.path
+    do
+        PythonRuntime.init.Force()
+        let pySysModule = PythonEngine.ImportModule("sys")
+        let sysPath = pySysModule.GetAttr("path")
+        sysPath.InvokeMethod("append", new PyString( config.ResolutionFolder)) |> ignore
 
     member x.RuntimeAssembly =
       runtimeAssembly
@@ -177,7 +185,7 @@ type PythonTypeProvider(config : TypeProviderConfig) as this =
         rootType.AddMembersDelayed <| fun() ->
             [ 
                 let server = PythonStaticInfo.GetServer()
-                for pyModuleName, xmlDoc in server.GetLoadedModulesInfo( import = modulesToImport.Split(','))  do
+                for pyModuleName, xmlDoc in server.GetLoadedModulesInfo(workingFolder = config.ResolutionFolder, import = modulesToImport.Split(','))  do
                     yield this.GetTypeForModule(pyModuleName, xmlDoc)
             ]
 

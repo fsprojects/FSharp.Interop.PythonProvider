@@ -1,11 +1,26 @@
 ﻿
-#r "Dependencies/pythonnet/Python.Runtime.dll"
+//#r "Dependencies/pythonnet/Python.Runtime.dll"
+#r "bin/Python.Runtime.dll"
 
 open Python
 open Python.Runtime
 
 //PythonEngine.InitExt()
 PythonEngine.Initialize() 
+
+let pySysModule = PythonEngine.ImportModule("sys")
+let sysPath = pySysModule.GetAttr("path")
+sysPath.InvokeMethod("append", new PyString(@"C:\Users\mitekm\Documents\GitHub\FSharp.Interop.PythonProvider\tests\PythonTypeProvider.Tests"))
+let testModule = PythonEngine.ImportModule("mytest")
+let inspectModule = PythonEngine.ImportModule("inspect")
+let testFunc = testModule.GetAttr("aMethod")
+let argsInfo = inspectModule.InvokeMethod("getargspec", testFunc)
+let args2 = argsInfo.GetAttr("args")
+testFunc.Invoke(new PyInt(5), new PyInt(7))
+PythonEngine.RunSimpleString("5")
+
+PyTuple.IsTupleType(new PyInt(12))
+
 let n = PythonEngine.BeginAllowThreads()
 //PythonEngine.EndAllowThreads(n)
 
@@ -22,7 +37,7 @@ let none = PythonEngine.RunSimpleString("eval('None')")
 let x = PyObject.FromManagedObject(5.0f)
 x.GetPythonType()
 
-let pySysModule = PythonEngine.ImportModule("sys")
+
 let pyMathModule = PythonEngine.ImportModule("math")
 let sin = pyMathModule ? sin
 let modules = pySysModule.GetAttr("modules") 

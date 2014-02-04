@@ -1,3 +1,0 @@
-
-def aMethod():
-   pass

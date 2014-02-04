@@ -174,3 +174,6 @@ nuget/
 
 # Nuget outputs
 nuget/*.nupkg
+
+# Python 
+*.pyc

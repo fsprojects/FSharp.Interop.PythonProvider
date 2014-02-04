@@ -40,13 +40,21 @@ type PythonStaticInfoServer() =
         then Some( o?name)
         else None
 
-    let builtin = 
+    let isbuiltin = 
         let isbuiltinFunc = 
             lazy 
                 use _lock = acquire()
                 let builtin = PythonEngine.ImportModule("inspect")
                 builtin ? isbuiltin
         fun(f: PyObject) -> isbuiltinFunc.Value.Invoke(f).IsTrue()
+
+    let isfunction = 
+        let isFunctionFunc = 
+            lazy 
+                use _lock = acquire()
+                let builtin = PythonEngine.ImportModule("inspect")
+                builtin ? isfunction
+        fun(f: PyObject) -> isFunctionFunc.Value.Invoke(f).IsTrue()
 
     let argsFromBuiltinDocs(doc: string) = 
         let firstLine = doc.Split('\n').[0]
@@ -56,17 +64,31 @@ type PythonStaticInfoServer() =
         assert ( length >= 0)
         doc.Substring(leftParent + 1, length).Split(',') |> Array.map (fun x -> x.Trim())
 
+    let argForFunction(func: PyObject) = 
+        use inpect = PythonEngine.ImportModule("inspect")
+        let args = inpect.InvokeMethod("getargspec", func).GetAttr("args")
+        [| for i = 0 to args.Length() - 1 do yield args.[i].ToString() |]
+
 //    // Prevent the app domain from exiting, we keep it around forever.
 //    // See http://stackoverflow.com/questions/2410221/appdomain-and-marshalbyrefobject-life-time-how-to-avoid-remotingexception
 //    override __.InitializeLifetimeService() = null
 
-    member x.GetLoadedModulesInfo(import: string[]) = 
+    member x.GetLoadedModulesInfo(workingFolder: string, import: string[]) = 
         use _lock = acquire()
-        for m in import do
-            let pyModule = PythonEngine.ImportModule(m.Trim())
-            assert (pyModule <> null)
 
         use pySysModule = PythonEngine.ImportModule("sys")
+        let sysPath = pySysModule.GetAttr("path")
+        sysPath.InvokeMethod("append", new PyString( workingFolder)) |> ignore
+        
+        let mutable sysImported = false
+
+        for m in import do
+            if m = "sys"
+            then sysImported <- true
+            else 
+                let pyModule = PythonEngine.ImportModule(m.Trim())
+                assert (pyModule <> null)
+
         use modules = pySysModule.GetAttr("modules")    
         use keys = modules.InvokeMethod("keys")
         [ for i in 0 .. keys.Length() - 1 do 
@@ -117,10 +139,13 @@ type PythonStaticInfoServer() =
             let args = 
                 if pyItemObj.IsCallable() 
                 then
-                    match builtin pyItemObj, doc with
+                    match isbuiltin pyItemObj, doc with
                     | true, Some docString -> Some( argsFromBuiltinDocs docString)
                     | true, None -> Some( [| "params" |])
-                    | false, _ -> None
+                    | false, _ -> 
+                        if isfunction pyItemObj
+                        then Some( argForFunction pyItemObj)
+                        else None
                 else 
                     None
 
