@@ -166,12 +166,14 @@ module Main =
     open System.Runtime.Remoting
     open System.Runtime.Remoting.Lifetime
     open System.Runtime.Remoting.Channels
+    open System.Threading
 
     [<STAThreadAttribute>]
     [<EntryPoint>]
     let main argv = 
 
         let channelName = argv.[0]
+        let event = EventWaitHandle.OpenExisting(name = channelName)
         let chan = new Ipc.IpcChannel(channelName) 
         //LifetimeServices.LeaseTime            <- TimeSpan(7,0,0,0) // days,hours,mins,secs 
         //LifetimeServices.LeaseManagerPollTime <- TimeSpan(7,0,0,0)
@@ -182,9 +184,9 @@ module Main =
         let server = new PythonStaticInfoServer()
         let objRef = RemotingServices.Marshal(server,"PythonStaticInfoServer") 
         RemotingConfiguration.RegisterActivatedServiceType(typeof<PythonStaticInfoServer>)
-        //System.Console.WriteLine("Hit <enter> to exit...")
-        //let  form = new System.Windows.Forms.Form(Visible=false)
-        System.Windows.Forms.Application.Run()
-        //form.Visible <- false
-        //let line = System.Console.ReadLine()
+        let success = event.Set()
+        assert success
+        let parentPid = channelName.Split('_').[1]
+        let parentProcess = Process.GetProcessById(int parentPid)
+        parentProcess.WaitForExit()
         0 // return an integer exit code

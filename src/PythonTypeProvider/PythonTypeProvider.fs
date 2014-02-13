@@ -10,6 +10,7 @@ open System.Linq.Expressions
 open System.Security
 open System.Reflection
 open System.Diagnostics
+open System.Threading
 open PythonTypeProvider.Server
 
 type Platform = x86 = 0 | x64 = 1
@@ -27,16 +28,22 @@ module PythonStaticInfo =
             let tick = System.Environment.TickCount
             let salt = randomSalt.Next()
             sprintf "PythonStaticInfoServer_%d_%d_%d" pid tick salt
+
+        let createdNew = ref false
+        use serverStarted = new EventWaitHandle(false, EventResetMode.ManualReset, channelName, createdNew);
+        assert !createdNew
+
         let exePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),"PythonTypeProviderProxy.exe")
-        let psi = ProcessStartInfo(UseShellExecute=false,CreateNoWindow=true,FileName=exePath, Arguments=channelName,WindowStyle=ProcessWindowStyle.Hidden)
+        let psi = ProcessStartInfo( UseShellExecute = false, CreateNoWindow = true, FileName=exePath, Arguments = channelName, WindowStyle = ProcessWindowStyle.Hidden)
         let p = Process.Start(psi)
-        System.AppDomain.CurrentDomain.ProcessExit.Add(fun _ -> p.Kill())
-        p.WaitForInputIdle() |> ignore
+
+        let success = serverStarted.WaitOne()
+        assert success
         p.Exited.Add(fun _ -> lastServer <- None)
-        let T = Activator.GetObject(typeof<PythonStaticInfoServer>,"ipc://" + channelName + "/PythonStaticInfoServer") 
-        let x = T :?> PythonStaticInfoServer
-        lastServer <- Some x
-        x
+        let server: PythonStaticInfoServer = 
+            Activator.GetObject(typeof<PythonStaticInfoServer>,"ipc://" + channelName + "/PythonStaticInfoServer") |> unbox
+        lastServer <- Some server
+        server
 
     // This is needed, look on stackoverflow for CreateInstanceFromAndUnwrap errors
     AppDomain.CurrentDomain.add_AssemblyResolve(ResolveEventHandler(fun _ args -> 

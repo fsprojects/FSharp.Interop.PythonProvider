@@ -25,7 +25,9 @@
     <DocumentationFile>
     </DocumentationFile>
     <Prefer32Bit>true</Prefer32Bit>
-    <OtherFlags>--target:winexe</OtherFlags>
+    <OtherFlags>
+    </OtherFlags>
+    <StartArguments>PythonStaticInfoServer_27788_2015065968_366086954</StartArguments>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
