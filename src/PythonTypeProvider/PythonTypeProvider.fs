@@ -13,9 +13,13 @@ open System.Diagnostics
 open System.Threading
 open PythonTypeProvider.Server
 
-type Platform = x86 = 0 | x64 = 1
+//type Platform = x86 = 0 | x64 = 1
 
 module PythonStaticInfo = 
+
+    [<Literal>]
+    let pythonDesignTimeProxy = "PythonDesignTimeProxy.exe"
+
     let mutable lastServer = None
     let GetServer() =
       match lastServer with 
@@ -33,15 +37,14 @@ module PythonStaticInfo =
         use serverStarted = new EventWaitHandle(false, EventResetMode.ManualReset, channelName, createdNew);
         assert !createdNew
 
-        let exePath = Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location),"PythonTypeProviderProxy.exe")
-        let psi = ProcessStartInfo( UseShellExecute = false, CreateNoWindow = true, FileName=exePath, Arguments = channelName, WindowStyle = ProcessWindowStyle.Hidden)
-        let p = Process.Start(psi)
+        let exePath = Path.Combine(Path.GetDirectoryName( Assembly.GetExecutingAssembly().Location), pythonDesignTimeProxy)
+        let startInfo = ProcessStartInfo( UseShellExecute = false, CreateNoWindow = true, FileName=exePath, Arguments = channelName, WindowStyle = ProcessWindowStyle.Hidden)
+        let p = Process.Start( startInfo, EnableRaisingEvents = true)
 
         let success = serverStarted.WaitOne()
         assert success
         p.Exited.Add(fun _ -> lastServer <- None)
-        let server: PythonStaticInfoServer = 
-            Activator.GetObject(typeof<PythonStaticInfoServer>,"ipc://" + channelName + "/PythonStaticInfoServer") |> unbox
+        let server = Activator.GetObject(typeof<PythonStaticInfoServer>,"ipc://" + channelName + "/PythonStaticInfoServer") :?> PythonStaticInfoServer 
         lastServer <- Some server
         server
 

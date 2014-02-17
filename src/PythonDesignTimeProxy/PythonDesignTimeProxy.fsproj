@@ -8,9 +8,9 @@
     <ProjectGuid>f5932d2f-eb19-45b6-961d-01acf9e086bd</ProjectGuid>
     <OutputType>Exe</OutputType>
     <RootNamespace>PythonTypeProviderProxy</RootNamespace>
-    <AssemblyName>PythonTypeProviderProxy</AssemblyName>
+    <AssemblyName>PythonDesignTimeProxy</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <Name>PythonTypeProviderProxy</Name>
+    <Name>PythonDesignTimeProxy</Name>
     <TargetFSharpCoreVersion>4.3.0.0</TargetFSharpCoreVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">

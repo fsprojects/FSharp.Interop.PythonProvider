@@ -64,6 +64,11 @@
     <Compile Include="PythonTypeProvider.fs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\PythonDesignTimeProxy\PythonDesignTimeProxy.fsproj">
+      <Name>PythonDesignTimeProxy</Name>
+      <Project>{f5932d2f-eb19-45b6-961d-01acf9e086bd}</Project>
+      <Private>True</Private>
+    </ProjectReference>
     <Reference Include="FSharp.Core, Version=$(TargetFSharpCoreVersion), Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
       <Private>True</Private>
     </Reference>
@@ -74,11 +79,6 @@
     <ProjectReference Include="..\..\..\pythonnet\pythonnet\src\runtime\Python.Runtime.csproj">
       <Name>Python.Runtime</Name>
       <Project>{097b4ac0-74e9-4c58-bcf8-c69746ec8271}</Project>
-      <Private>True</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\PythonTypeProviderProxy\PythonTypeProviderProxy.fsproj">
-      <Name>PythonTypeProviderProxy</Name>
-      <Project>{f5932d2f-eb19-45b6-961d-01acf9e086bd}</Project>
       <Private>True</Private>
     </ProjectReference>
   </ItemGroup>

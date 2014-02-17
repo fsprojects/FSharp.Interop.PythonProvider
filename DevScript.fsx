@@ -19,6 +19,8 @@ let args2 = argsInfo.GetAttr("args")
 testFunc.Invoke(new PyInt(5), new PyInt(7))
 PythonEngine.RunSimpleString("5")
 
+PyObject.FromManagedObject(5).GetPythonType()
+
 PyTuple.IsTupleType(new PyInt(12))
 
 let n = PythonEngine.BeginAllowThreads()
