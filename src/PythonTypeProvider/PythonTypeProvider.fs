@@ -10,8 +10,8 @@ open System.Linq.Expressions
 open System.Security
 open System.Reflection
 open System.Diagnostics
-open System.Threading
 open PythonTypeProvider.Server
+open System.Threading.Tasks
 
 //type Platform = x86 = 0 | x64 = 1
 
@@ -33,16 +33,15 @@ module PythonStaticInfo =
             let salt = randomSalt.Next()
             sprintf "PythonStaticInfoServer_%d_%d_%d" pid tick salt
 
-        let createdNew = ref false
-        use serverStarted = new EventWaitHandle(false, EventResetMode.ManualReset, channelName, createdNew);
-        assert !createdNew
-
         let exePath = Path.Combine(Path.GetDirectoryName( Assembly.GetExecutingAssembly().Location), pythonDesignTimeProxy)
-        let startInfo = ProcessStartInfo( UseShellExecute = false, CreateNoWindow = true, FileName=exePath, Arguments = channelName, WindowStyle = ProcessWindowStyle.Hidden)
+        let startInfo = ProcessStartInfo( UseShellExecute = false, CreateNoWindow = true, FileName=exePath, Arguments = channelName, WindowStyle = ProcessWindowStyle.Hidden, RedirectStandardOutput = true)
         let p = Process.Start( startInfo, EnableRaisingEvents = true)
 
-        let success = serverStarted.WaitOne()
-        assert success
+        let proxyStarted = async { while p.StandardOutput.ReadLine() <> sprintf "%s started." channelName do () } |> Async.StartAsTask
+        if not( proxyStarted.Wait( TimeSpan.FromSeconds( 15.)))
+        then 
+            p.Kill()
+
         p.Exited.Add(fun _ -> lastServer <- None)
         let server = Activator.GetObject(typeof<PythonStaticInfoServer>,"ipc://" + channelName + "/PythonStaticInfoServer") :?> PythonStaticInfoServer 
         lastServer <- Some server
