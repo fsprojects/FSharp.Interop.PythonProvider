@@ -3,7 +3,6 @@
 open Microsoft.Win32
 open Microsoft.FSharp.Core.CompilerServices
 open Microsoft.FSharp.Quotations
-open Samples.FSharp.ProvidedTypes
 open System
 open System.IO
 open System.Linq.Expressions
@@ -12,6 +11,8 @@ open System.Reflection
 open System.Diagnostics
 open PythonTypeProvider.Server
 open System.Threading.Tasks
+
+open ProviderImplementation.ProvidedTypes
 
 //type Platform = x86 = 0 | x64 = 1
 
