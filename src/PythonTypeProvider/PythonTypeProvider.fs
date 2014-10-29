@@ -85,7 +85,7 @@ type RuntimeAPI () =
     static member Call(pyModule: string, name: string, args: obj[]) : Python.Runtime.PyObject =
         PythonRuntime.init.Force()
         let pyModuleObj = Python.Runtime.PythonEngine.ImportModule(pyModule)
-        pyModuleObj.GetAttr(name).Invoke([| for a in args -> PythonRuntime.convertToPyObject a |])
+        pyModuleObj.GetAttr(name).Invoke([| for a in args -> PythonRuntime.convertToPyObject a |]) 
 
 // Runtime methods to be called by "invoker" Linq expr
 /// Helpers to find the handles in type provider runtime DLL. 
@@ -103,11 +103,11 @@ type internal RuntimeInfo (config : TypeProviderConfig) =
             null))
 
     //add resolution folder to sys.path
-    do
-        PythonRuntime.init.Force()
-        let pySysModule = PythonEngine.ImportModule("sys")
-        let sysPath = pySysModule.GetAttr("path")
-        sysPath.InvokeMethod("append", new PyString( config.ResolutionFolder)) |> ignore
+//    do
+//        PythonRuntime.init.Force()
+//        let pySysModule = PythonEngine.ImportModule("sys")
+//        let sysPath = pySysModule.GetAttr("path")
+//        sysPath.InvokeMethod("append", new PyString( config.ResolutionFolder)) |> ignore
 
     member x.RuntimeAssembly =
       runtimeAssembly

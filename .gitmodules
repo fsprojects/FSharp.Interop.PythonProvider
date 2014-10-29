@@ -1,0 +1,3 @@
+[submodule "pythonnet"]
+	path = pythonnet
+	url = https://github.com/pythonnet/pythonnet.git
