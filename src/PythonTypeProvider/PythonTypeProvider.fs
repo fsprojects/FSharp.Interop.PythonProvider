@@ -19,9 +19,10 @@ open ProviderImplementation.ProvidedTypes
 module PythonStaticInfo = 
 
     [<Literal>]
-    let pythonDesignTimeProxy = "PythonDesignTimeProxy.exe"
+    let pythonDesignTimeProxy = "PythonProvider.TypesDiscoveryServer.exe"
 
     let mutable lastServer = None
+
     let GetServer() =
       match lastServer with 
       | Some s -> s
@@ -134,37 +135,32 @@ type PythonTypeProvider(config : TypeProviderConfig) as this =
               | Some doc -> doc
               | None -> sprintf "The Python module %s" pyModuleName)
             t.AddMembersDelayed (fun () ->
-                [ for pyValueName, pyItemDoc, pyArgs in PythonStaticInfo.GetServer().GetModuleInfo(pyModuleName) do
+                [ for memberName, docs, pyArgs in PythonStaticInfo.GetServer().GetModuleInfo(pyModuleName) do
                     
+                    let doc = 
+                        match docs with 
+                        | null -> "The Python value " + pyModuleName + "." + memberName
+                        | doc -> doc
+
                     let newMember : MemberInfo = 
                         match pyArgs with
-                        | Some args when args.Length > 0 -> 
-                            let parameters = [for a in args -> ProvidedParameter(a, typeof<obj>)]
-                            let method' = ProvidedMethod(pyValueName, parameters, returnType = typeof<Python.Runtime.PyObject>, IsStaticMethod = true)
-                            method'.InvokeCode <- fun args ->  
-                                let argsArray = Expr.NewArray(typeof<obj>, args)
-                                <@@ RuntimeAPI.Call(pyModuleName, pyValueName, %%argsArray) @@>
-
-                            let doc = 
-                                match pyItemDoc with 
-                                | Some doc -> doc
-                                | None -> "The Python value " + pyModuleName + "." + pyValueName
-                            method'.AddXmlDoc("<summary>" + SecurityElement.Escape(doc) + "</summary>")
-                            upcast method'
-                            
-                        | _ -> 
-                            let prop = ProvidedProperty(pyValueName, 
+                        | [||] ->
+                            let prop = ProvidedProperty(memberName, 
                                                         typeof<Python.Runtime.PyObject>,
                                                         IsStatic=true,
-                                                        //GetterCode=(fun _args -> RuntimeInfo.GetPythonPropertyExpr(pyModuleName,pyValueName)))        
-                                                        GetterCode=(fun _args -> <@@ RuntimeAPI.GetPythonProperty(pyModuleName,pyValueName) @@>))        
+                                                        GetterCode=(fun _args -> <@@ RuntimeAPI.GetPythonProperty(pyModuleName,memberName) @@>))        
 
-                            let doc = 
-                                match pyItemDoc with 
-                                | Some doc -> doc
-                                | None -> "The Python value " + pyModuleName + "." + pyValueName
                             prop.AddXmlDoc("<summary>" + SecurityElement.Escape(doc) + "</summary>")
                             upcast prop
+                        | _ -> 
+                            let parameters = [for a in pyArgs -> ProvidedParameter(a, typeof<obj>)]
+                            let method' = ProvidedMethod(memberName, parameters, returnType = typeof<Python.Runtime.PyObject>, IsStaticMethod = true)
+                            method'.InvokeCode <- fun args ->  
+                                let argsArray = Expr.NewArray(typeof<obj>, args)
+                                <@@ RuntimeAPI.Call(pyModuleName, memberName, %%argsArray) @@>
+
+                            method'.AddXmlDoc("<summary>" + SecurityElement.Escape(doc) + "</summary>")
+                            upcast method'
 
                     yield newMember ]
             )
@@ -230,6 +226,8 @@ type PythonTypeProvider(config : TypeProviderConfig) as this =
         t
     do this.AddNamespace(rootNamespace2, [typeBeforeStaticParams])
 #endif
+    interface IDisposable with 
+        member __.Dispose() = ()
                             
 [<assembly:TypeProviderAssembly>]
 do()

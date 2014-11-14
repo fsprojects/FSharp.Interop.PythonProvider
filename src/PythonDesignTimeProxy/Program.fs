@@ -1,12 +1,13 @@
 ﻿namespace PythonTypeProvider.Server
 
-// Learn more about F# at http://fsharp.net
-// See the 'F# Tutorial' project for more help.
-/// Used at compile-time, in a separate app domain
 open Python
 open Python.Runtime
 open System
 open System.Diagnostics
+open FSharp.Interop
+
+type ModuleName = string 
+type Doc = string option
 
 // Put the stuff that accesses Python in an app domain. The python code
 // seems to go scrpaing through all loaded DLLs looking for something, and this process triggers
@@ -56,12 +57,12 @@ type PythonStaticInfoServer() =
                 builtin ? isfunction
         fun(f: PyObject) -> isFunctionFunc.Value.Invoke(f).IsTrue()
 
-    let argsFromBuiltinDocs(doc: string) = 
+    let argsFromBuiltinDocs(name: string, doc: string) = 
         let firstLine = doc.Split('\n').[0]
         let leftParent, rightParent = firstLine.IndexOf '(', firstLine.LastIndexOf ')'
         let length = rightParent - leftParent - 1
-        //Debug.Assert( length > 0, "Failed to parse doc string: " + doc)
-        assert ( length >= 0)
+        //Debug.Assert( length > 0, sprintf "For function %s failed to parse doc string:\n %s" name doc)
+        //assert ( length >= 0)
         doc.Substring(leftParent + 1, length).Split(',') |> Array.map (fun x -> x.Trim())
 
     let argForFunction(func: PyObject) = 
@@ -72,60 +73,50 @@ type PythonStaticInfoServer() =
 //    // Prevent the app domain from exiting, we keep it around forever.
 //    // See http://stackoverflow.com/questions/2410221/appdomain-and-marshalbyrefobject-life-time-how-to-avoid-remotingexception
 //    override __.InitializeLifetimeService() = null
+    let sysModule = lazy Python.SysModule()
 
-    member x.GetLoadedModulesInfo(workingFolder: string, import: string[]) = 
-        use _lock = acquire()
-
-        use pySysModule = PythonEngine.ImportModule("sys")
-        let sysPath = pySysModule.GetAttr("path")
-        sysPath.InvokeMethod("append", new PyString( workingFolder)) |> ignore
-        
-        let mutable sysImported = false
-
-        for m in import do
-            if m = "sys"
-            then sysImported <- true
-            else 
-                let pyModule = PythonEngine.ImportModule(m.Trim())
-                assert (pyModule <> null)
-
-        use modules = pySysModule.GetAttr("modules")    
-        use keys = modules.InvokeMethod("keys")
-        [ for i in 0 .. keys.Length() - 1 do 
-            use idx = new PyInt(i)
-            use item = keys.[idx]
-            let moduleName = item.ToString() 
-            match moduleName with 
-            | null -> ()
-            | s when s.StartsWith "encodings." -> ()
-            | _ -> 
-                let doc = 
-                    use pyModule = PythonEngine.ImportModule(moduleName)
-                    if pyModule.HasAttr "__doc__" then
-                        use attr = pyModule.GetAttr "__doc__"
-                        Some (attr.ToString())
-                    else
-                        None
-                yield moduleName, doc
-        ]
-
-(*
-    member x.RunSimpleString(code) =  
-        use _lock = acquire()
-        PythonEngine.RunSimpleString(code)
-
-    member x.ModuleFromString(name, code) =  
-        use _lock = acquire()
+    member x.GetLoadedModulesInfo(workingFolder: string, import: string[]): (ModuleName * Doc)[] = 
         try 
-            PythonEngine.ModuleFromString(name, code) |> ignore
-        with :? PythonException as p -> failwith p.Message
-*)
+            sysModule.Value.AppendToPath( workingFolder)
+            import |> Array.iter (fun x -> 
+                PythonEngine.ImportModule x |> ignore
+            )
+            [| for x in sysModule.Value.Modules() -> x.Name, Some x.Doc |]
+        with ex ->
+            let serializable = Exception(ex.Message)
+            serializable.Data.Add("inner", string ex)
+            raise serializable
 
-    member x.GetModuleInfo(pyModuleName) = 
+    member __.GetModuleInfo(pyModuleName): (string * string * string[])[] = 
+        let m = sysModule.Value.Modules() |> Array.find(fun x -> x.Name = pyModuleName)
+        m.Members
+        |> Seq.map (fun (name, x) ->
+            if x.HasAttr("__name__")
+            then 
+                let args = 
+                    if x.IsCallable() 
+                    then
+                        try
+                            if x.IsBuiltIn
+                            then argsFromBuiltinDocs(x.Name, x.Doc)
+                            else argForFunction x
+                        with ex ->
+                            Debug.WriteLine(sprintf "Cannot parse args from doc for built-in function %s. Doc:\n%s" x.Name x.Doc)
+                            [| "params" |]
+                    else
+                        Array.empty
+
+                name, x.Doc, args
+            else
+                name, null, Array.empty
+        )
+        |> Seq.toArray
+
+    member x.GetModuleInfo1(pyModuleName): (string * string * string[])[] = 
         use _lock = acquire()
         use pyModule = PythonEngine.ImportModule(pyModuleName)
         use pyModuleItems = pyModule.Dir()
-        [ for pyItem in pyModuleItems do
+        [| for pyItem in pyModuleItems do
             use pyItemObj = pyModule.GetAttr( pyItem)
             let doc = 
                 match pyItemObj.HasAttr( "__doc__"), lazy pyItemObj.GetAttr( "__doc__") with
@@ -140,26 +131,26 @@ type PythonStaticInfoServer() =
                 if pyItemObj.IsCallable() 
                 then
                     match isbuiltin pyItemObj, doc with
-                    | true, Some docString -> Some( argsFromBuiltinDocs docString)
-                    | true, None -> Some( [| "params" |])
+                    | true, Some docString -> argsFromBuiltinDocs(memberName, docString)
+                    | true, None -> [| "params" |]
                     | false, _ -> 
                         if isfunction pyItemObj
-                        then Some( argForFunction pyItemObj)
-                        else None
+                        then argForFunction pyItemObj
+                        else Array.empty
                 else 
-                    None
+                    Array.empty
 
             let doc = 
                 if memberName.Contains("built-in function") then
                     use attr = pyItem.GetAttr("__doc__")
-                    attr.ToString() |> Some
+                    attr.ToString()
                 else
                     if pyItemObj.HasAttr("__doc__") then
                         use attr = pyItemObj.GetAttr("__doc__")
-                        attr.ToString() |> Some
+                        attr.ToString() 
                     else
-                        None 
-            yield memberName, doc, args ]
+                        null 
+            yield memberName, doc, args |]
 
 module Main = 
     open System.Runtime.Remoting

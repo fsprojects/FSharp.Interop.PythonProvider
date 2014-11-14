@@ -2,20 +2,18 @@
 #r "../../bin/FSharp.Interop.PythonProvider.dll"
 
 open FSharp.Interop
-//type Python = PythonProvider<"sys, math, mytest">
-type Python = PythonProvider<"sys, math">
+type Python = PythonProvider<"sys,math,io">
 
 Python.sys.path
 printfn "Res = %A" Python.math.pi
 Python.math.sin(3.0)
 //Python.mytest.aMethod(3, 5)
+Python.functools.WRAPPER_UPDATES
+Python.io.``open``()
 
 Python.UserDict.DictMixin
 Python.__builtin__.ArithmeticError
-Python.__main__.__doc__
-Python._abcoll.ABCMeta
-Python._codecs.ascii_decode
-Python._functools.partial
+Python.functools.partial
 Python.abc.abstractproperty
 Python.sys.copyright
 Python.operator.abs( Python.math.pi)
