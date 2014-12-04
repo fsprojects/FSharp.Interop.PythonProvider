@@ -8,9 +8,8 @@ Python.sys.path
 printfn "Res = %A" Python.math.pi
 Python.math.sin(3.0)
 //Python.mytest.aMethod(3, 5)
-Python.functools.WRAPPER_UPDATES
-Python.io.``open``()
-
+ 
+Python.io.``open``([| sprintf "%s\%s" __SOURCE_DIRECTORY__ "mytest.py" |])
 Python.UserDict.DictMixin
 Python.__builtin__.ArithmeticError
 Python.functools.partial

@@ -67,6 +67,7 @@
     <Compile Include="ProvidedTypes.fsi" />
     <Compile Include="ProvidedTypes.fs" />
     <Compile Include="DebugProvidedTypes.fs" />
+    <Compile Include="ProvidedTypesExtensions.fs" />
     <Compile Include="PythonTypeProvider.fs" />
     <None Include="packages.config" />
   </ItemGroup>

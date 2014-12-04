@@ -138,21 +138,31 @@ type PythonTypeProvider(config : TypeProviderConfig) as this =
                 [ for memberName, docs, pyArgs in PythonStaticInfo.GetServer().GetModuleInfo(pyModuleName) do
                     
                     let doc = 
-                        match docs with 
-                        | null -> "The Python value " + pyModuleName + "." + memberName
-                        | doc -> doc
+                        sprintf "<summary>%s</summary>" <|
+                            match docs with 
+                            | null -> "The Python value " + pyModuleName + "." + memberName
+                            | doc -> SecurityElement.Escape(doc)
 
                     let newMember : MemberInfo = 
-                        match pyArgs with
-                        | [||] ->
+                        if Array.isEmpty pyArgs
+                        then 
                             let prop = ProvidedProperty(memberName, 
                                                         typeof<Python.Runtime.PyObject>,
                                                         IsStatic=true,
                                                         GetterCode=(fun _args -> <@@ RuntimeAPI.GetPythonProperty(pyModuleName,memberName) @@>))        
 
-                            prop.AddXmlDoc("<summary>" + SecurityElement.Escape(doc) + "</summary>")
+                            MemberInfo.addXmlDoc doc prop
                             upcast prop
-                        | _ -> 
+                        elif pyArgs = [| "params" |]
+                        then 
+                            let parameters = [for a in pyArgs -> ProvidedParameter("args", typeof<obj[]>)]
+                            let method' = ProvidedMethod(memberName, parameters, returnType = typeof<Python.Runtime.PyObject>, IsStaticMethod = true)
+                            method'.InvokeCode <- fun args ->  
+                                <@@ RuntimeAPI.Call(pyModuleName, memberName, (%%args.Head: obj[])) @@>
+
+                            MemberInfo.addXmlDoc doc method'
+                            upcast method'
+                        else
                             let parameters = [for a in pyArgs -> ProvidedParameter(a, typeof<obj>)]
                             let method' = ProvidedMethod(memberName, parameters, returnType = typeof<Python.Runtime.PyObject>, IsStaticMethod = true)
                             method'.InvokeCode <- fun args ->  
