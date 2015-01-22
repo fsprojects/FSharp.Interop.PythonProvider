@@ -1,3 +1,6 @@
+[![Issue Stats](http://issuestats.com/github/fsprojects/FSharp.Interop.PythonProvider/badge/issue)](http://issuestats.com/github/fsprojects/FSharp.Interop.PythonProvider)
+[![Issue Stats](http://issuestats.com/github/fsprojects/FSharp.Interop.PythonProvider/badge/pr)](http://issuestats.com/github/fsprojects/FSharp.Interop.PythonProvider)
+
 PythonTypeProvider
 ==================
 
