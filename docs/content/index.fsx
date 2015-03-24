@@ -7,7 +7,7 @@ FSharp.Interop.PythonProvider
 
 Early experimental F# type provider for Python. 
 
-Uses [Python for .NET](http://pythonnet.sourceforge.net/) for metadata and interop.
+Uses [Python for .NET](https://github.com/pythonnet/pythonnet) for metadata and interop.
 
 Currently uses python27.dll for execution on Windows (this is determined by Python.NET).
 
